@@ -1,5 +1,5 @@
 ---
-title: Slim Framework Documentation
+title: Dependency Injection
 ---
 
 Slim extends the [Pimple][1] DI container allowing you to abstract your classes dependencies using configurable factories & properties.

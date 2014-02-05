@@ -14,26 +14,24 @@ You can use Slim as a simple store, and attach different properties directly on 
 	    $app['foo'] = 'bar';
 	    echo $app['foo']; //=> bar
 
-This provides a really easy way to attach static options or variables to the DI container. The downside with this approach is when you start using this to store instances of classes, everything gets instantiated immediately so if you don't end up using the variables then it wastes both processing time and memory to create all the settings.
+This provides a really easy way to bind static variables to the DI container which you can then access and use throughout your app.
 
-For situations like these, you can assign a closure to create and return a new instance of the variable, that way it will only be stored in memory when you use it:
+You can also dynamically generate properties by assigning a key to a closure instead of a static value, then every time the key gets accessed Slim will run the closure and return whatever the function returns allowing you to generate values on-the-fly.
 
 	<?php
 	    $app = new \Slim\App();
 	
-	    class Bar {}; 
-	
-	    $app['foo'] = function () {
-	        return new Bar(); 
+	    $app['id'] = function () {
+	        static $id = 0;
+	        return $id++;
 	    };
-	    
-	    $bar = $app['foo'];
+	
+	    echo $app['id']; //=> 0
+	    echo $app['id']; //=> 1
 
-`$bar` will contain an instance of `Bar`, not the closure itself.
+## DI Factories
 
-## Abstracting Dependencies
-
-You can use these kinds of closure factories to abstract your dependencies in your classes, for example with the following class:
+You can use these kinds of closures as factories to abstract your class's dependencies, for example let's say we are working with the following class:
 
 	<?php
 	    class Bar {
@@ -43,7 +41,7 @@ You can use these kinds of closure factories to abstract your dependencies in yo
 	        }
 	    }
 
-With this code every time you want to instantiate a Bar object you will need to create a Logger and pass it in. Using Slim you can just create a factory and even use the DI container as a resource locator allowing the logger itself to be switched out:
+With this code every time you want to instantiate a Bar object you will need to create a Logger and pass it in. Using Slim you can just create a factory and even use the DI container as a resource locator allowing the logger itself to be switched out really conveniently:
 
 	<?php
 	   $app['level'] = 4;
@@ -58,30 +56,30 @@ With this code every time you want to instantiate a Bar object you will need to 
 	       return new Bar($logger, $level);
 	   };
 
-The parameter passed into the the closure is the Slim app object, so you have access to all it's properties as-well as the other resources you attached to it.
+The parameter passed into the closure is the Slim app object, so you have access to all it's properties as-well as the other resources you attached to it.
 
 ## Singletons
 
-If you simply assign a key in the container to a factory, then whenever you access that key a new instance will be created and returned. In situations where you want to have a singleton-like factory, you simply need to wrap the closure in a call to `$app->share`:
+If you simply assign a key on the Slim object to a factory, then whenever you access that key a new instance will be created and returned. In situations where you want to have a singleton-like factory, you simply need to wrap the closure in a call to `$app->share`:
 
 	<?php
 	    $app = new \Slim\App();
 	
 	    class Bar {
 	        public $val = 1;
-	    }; 
+	    };
 	
 	    $app['foo'] = $app->share(function () {
-	        return new Bar(); 
+	        return new Bar();
 	    });
 	
 	    $bar = $app['foo'];
 	    $bar->val = 8;
-	 
+	
 	    $qux = $app['foo'];
 	    echo $qux->val; //=> 8
 
-The first time the closure get's called it will run the provided closure, store the resulting instance and return it. On all subsequent calls to that key, it will simply return the already created instance, giving us a singleton-like effect.
+The first time the closure gets called it will run the provided closure, store the resulting instance and return it. On all subsequent calls to that key, it will simply return the already created instance, giving us a singleton-like effect.
 
 ## Storing Closures
 
@@ -90,8 +88,8 @@ In some situations you may just want to store a closure and have slim return the
 	<?php
 	    $app['world'] = $app->protect(function($name) {
 	        echo "hello " . $name;
-	    }); 
-	 
+	    });
+	
 	    $app->get('/hello/:world', $app['world']);
 
 In the above code the actual closure will be returned much like a static property.
